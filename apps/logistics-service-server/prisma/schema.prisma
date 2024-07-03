@@ -1,0 +1,98 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DB_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Supplier {
+  contactInformation String?
+  contracts          Contract[]
+  createdAt          DateTime   @default(now())
+  id                 String     @id @default(cuid())
+  name               String?
+  updatedAt          DateTime   @updatedAt
+}
+
+model ComplianceDocument {
+  createdAt    DateTime  @default(now())
+  documentName String?
+  documentType String?
+  id           String    @id @default(cuid())
+  truck        Truck?    @relation(name: "ComplianceDocumentsOnTruck", fields: [truckId], references: [id])
+  truckId      String?
+  trucks       Truck[]   @relation(name: "ComplianceDocumentOnTrucks")
+  updatedAt    DateTime  @updatedAt
+  validFrom    DateTime?
+  validUntil   DateTime?
+}
+
+model Truck {
+  complianceDocument   ComplianceDocument?  @relation(name: "ComplianceDocumentOnTrucks", fields: [complianceDocumentId], references: [id])
+  complianceDocumentId String?
+  complianceDocuments  ComplianceDocument[] @relation(name: "ComplianceDocumentsOnTruck")
+  contracts            Contract[]
+  createdAt            DateTime             @default(now())
+  driver               Driver?              @relation(name: "DriverOnTrucks", fields: [driverId], references: [id])
+  driverId             String?
+  drivers              Driver[]             @relation(name: "DriversOnTruck")
+  id                   String               @id @default(cuid())
+  registrationNumber   String?
+  truckNumber          String?
+  updatedAt            DateTime             @updatedAt
+}
+
+model Driver {
+  createdAt       DateTime @default(now())
+  currentLocation String?
+  id              String   @id @default(cuid())
+  licenseNumber   String?
+  name            String?
+  truck           Truck?   @relation(name: "DriversOnTruck", fields: [truckId], references: [id])
+  truckId         String?
+  trucks          Truck[]  @relation(name: "DriverOnTrucks")
+  updatedAt       DateTime @updatedAt
+}
+
+model Customer {
+  contactInformation String?
+  contracts          Contract[]
+  createdAt          DateTime   @default(now())
+  id                 String     @id @default(cuid())
+  name               String?
+  updatedAt          DateTime   @updatedAt
+}
+
+model Contract {
+  contractNumber String?
+  createdAt      DateTime            @default(now())
+  customer       Customer?           @relation(fields: [customerId], references: [id])
+  customerId     String?
+  endDate        DateTime?
+  id             String              @id @default(cuid())
+  startDate      DateTime?
+  status         EnumContractStatus?
+  supplier       Supplier?           @relation(fields: [supplierId], references: [id])
+  supplierId     String?
+  truck          Truck?              @relation(fields: [truckId], references: [id])
+  truckId        String?
+  updatedAt      DateTime            @updatedAt
+}
+
+model User {
+  createdAt DateTime @default(now())
+  email     String?  @unique
+  firstName String?
+  id        String   @id @default(cuid())
+  lastName  String?
+  password  String
+  roles     Json
+  updatedAt DateTime @updatedAt
+  username  String   @unique
+}
+
+enum EnumContractStatus {
+  Option1
+}

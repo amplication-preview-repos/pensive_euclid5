@@ -16,7 +16,11 @@ import * as errors from "../../errors";
 import { Request } from "express";
 import { plainToClass } from "class-transformer";
 import { ApiNestedQuery } from "../../decorators/api-nested-query.decorator";
+import * as nestAccessControl from "nest-access-control";
+import * as defaultAuthGuard from "../../auth/defaultAuth.guard";
 import { DriverService } from "../driver.service";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
 import { DriverCreateInput } from "./DriverCreateInput";
 import { Driver } from "./Driver";
 import { DriverFindManyArgs } from "./DriverFindManyArgs";
@@ -26,10 +30,24 @@ import { TruckFindManyArgs } from "../../truck/base/TruckFindManyArgs";
 import { Truck } from "../../truck/base/Truck";
 import { TruckWhereUniqueInput } from "../../truck/base/TruckWhereUniqueInput";
 
+@swagger.ApiBearerAuth()
+@common.UseGuards(defaultAuthGuard.DefaultAuthGuard, nestAccessControl.ACGuard)
 export class DriverControllerBase {
-  constructor(protected readonly service: DriverService) {}
+  constructor(
+    protected readonly service: DriverService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Post()
   @swagger.ApiCreatedResponse({ type: Driver })
+  @nestAccessControl.UseRoles({
+    resource: "Driver",
+    action: "create",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async createDriver(@common.Body() data: DriverCreateInput): Promise<Driver> {
     return await this.service.createDriver({
       data: {
@@ -59,9 +77,18 @@ export class DriverControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get()
   @swagger.ApiOkResponse({ type: [Driver] })
   @ApiNestedQuery(DriverFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Driver",
+    action: "read",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async drivers(@common.Req() request: Request): Promise<Driver[]> {
     const args = plainToClass(DriverFindManyArgs, request.query);
     return this.service.drivers({
@@ -84,9 +111,18 @@ export class DriverControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id")
   @swagger.ApiOkResponse({ type: Driver })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Driver",
+    action: "read",
+    possession: "own",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async driver(
     @common.Param() params: DriverWhereUniqueInput
   ): Promise<Driver | null> {
@@ -116,9 +152,18 @@ export class DriverControllerBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Patch("/:id")
   @swagger.ApiOkResponse({ type: Driver })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Driver",
+    action: "update",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async updateDriver(
     @common.Param() params: DriverWhereUniqueInput,
     @common.Body() data: DriverUpdateInput
@@ -164,6 +209,14 @@ export class DriverControllerBase {
   @common.Delete("/:id")
   @swagger.ApiOkResponse({ type: Driver })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Driver",
+    action: "delete",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async deleteDriver(
     @common.Param() params: DriverWhereUniqueInput
   ): Promise<Driver | null> {
@@ -196,8 +249,14 @@ export class DriverControllerBase {
     }
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id/trucks")
   @ApiNestedQuery(TruckFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Truck",
+    action: "read",
+    possession: "any",
+  })
   async findTrucks(
     @common.Req() request: Request,
     @common.Param() params: DriverWhereUniqueInput
@@ -235,6 +294,11 @@ export class DriverControllerBase {
   }
 
   @common.Post("/:id/trucks")
+  @nestAccessControl.UseRoles({
+    resource: "Driver",
+    action: "update",
+    possession: "any",
+  })
   async connectTrucks(
     @common.Param() params: DriverWhereUniqueInput,
     @common.Body() body: TruckWhereUniqueInput[]
@@ -252,6 +316,11 @@ export class DriverControllerBase {
   }
 
   @common.Patch("/:id/trucks")
+  @nestAccessControl.UseRoles({
+    resource: "Driver",
+    action: "update",
+    possession: "any",
+  })
   async updateTrucks(
     @common.Param() params: DriverWhereUniqueInput,
     @common.Body() body: TruckWhereUniqueInput[]
@@ -269,6 +338,11 @@ export class DriverControllerBase {
   }
 
   @common.Delete("/:id/trucks")
+  @nestAccessControl.UseRoles({
+    resource: "Driver",
+    action: "update",
+    possession: "any",
+  })
   async disconnectTrucks(
     @common.Param() params: DriverWhereUniqueInput,
     @common.Body() body: TruckWhereUniqueInput[]

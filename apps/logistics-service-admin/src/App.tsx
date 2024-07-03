@@ -29,6 +29,10 @@ import { ContractList } from "./contract/ContractList";
 import { ContractCreate } from "./contract/ContractCreate";
 import { ContractEdit } from "./contract/ContractEdit";
 import { ContractShow } from "./contract/ContractShow";
+import { UserList } from "./user/UserList";
+import { UserCreate } from "./user/UserCreate";
+import { UserEdit } from "./user/UserEdit";
+import { UserShow } from "./user/UserShow";
 import { jwtAuthProvider } from "./auth-provider/ra-auth-jwt";
 
 const App = (): React.ReactElement => {
@@ -96,6 +100,13 @@ const App = (): React.ReactElement => {
           edit={ContractEdit}
           create={ContractCreate}
           show={ContractShow}
+        />
+        <Resource
+          name="User"
+          list={UserList}
+          edit={UserEdit}
+          create={UserCreate}
+          show={UserShow}
         />
       </Admin>
     </div>

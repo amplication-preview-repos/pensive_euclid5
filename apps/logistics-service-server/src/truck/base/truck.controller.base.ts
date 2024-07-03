@@ -16,7 +16,11 @@ import * as errors from "../../errors";
 import { Request } from "express";
 import { plainToClass } from "class-transformer";
 import { ApiNestedQuery } from "../../decorators/api-nested-query.decorator";
+import * as nestAccessControl from "nest-access-control";
+import * as defaultAuthGuard from "../../auth/defaultAuth.guard";
 import { TruckService } from "../truck.service";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
 import { TruckCreateInput } from "./TruckCreateInput";
 import { Truck } from "./Truck";
 import { TruckFindManyArgs } from "./TruckFindManyArgs";
@@ -32,10 +36,24 @@ import { DriverFindManyArgs } from "../../driver/base/DriverFindManyArgs";
 import { Driver } from "../../driver/base/Driver";
 import { DriverWhereUniqueInput } from "../../driver/base/DriverWhereUniqueInput";
 
+@swagger.ApiBearerAuth()
+@common.UseGuards(defaultAuthGuard.DefaultAuthGuard, nestAccessControl.ACGuard)
 export class TruckControllerBase {
-  constructor(protected readonly service: TruckService) {}
+  constructor(
+    protected readonly service: TruckService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Post()
   @swagger.ApiCreatedResponse({ type: Truck })
+  @nestAccessControl.UseRoles({
+    resource: "Truck",
+    action: "create",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async createTruck(@common.Body() data: TruckCreateInput): Promise<Truck> {
     return await this.service.createTruck({
       data: {
@@ -76,9 +94,18 @@ export class TruckControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get()
   @swagger.ApiOkResponse({ type: [Truck] })
   @ApiNestedQuery(TruckFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Truck",
+    action: "read",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async trucks(@common.Req() request: Request): Promise<Truck[]> {
     const args = plainToClass(TruckFindManyArgs, request.query);
     return this.service.trucks({
@@ -106,9 +133,18 @@ export class TruckControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id")
   @swagger.ApiOkResponse({ type: Truck })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Truck",
+    action: "read",
+    possession: "own",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async truck(
     @common.Param() params: TruckWhereUniqueInput
   ): Promise<Truck | null> {
@@ -143,9 +179,18 @@ export class TruckControllerBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Patch("/:id")
   @swagger.ApiOkResponse({ type: Truck })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Truck",
+    action: "update",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async updateTruck(
     @common.Param() params: TruckWhereUniqueInput,
     @common.Body() data: TruckUpdateInput
@@ -202,6 +247,14 @@ export class TruckControllerBase {
   @common.Delete("/:id")
   @swagger.ApiOkResponse({ type: Truck })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Truck",
+    action: "delete",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async deleteTruck(
     @common.Param() params: TruckWhereUniqueInput
   ): Promise<Truck | null> {
@@ -239,8 +292,14 @@ export class TruckControllerBase {
     }
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id/complianceDocuments")
   @ApiNestedQuery(ComplianceDocumentFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "ComplianceDocument",
+    action: "read",
+    possession: "any",
+  })
   async findComplianceDocuments(
     @common.Req() request: Request,
     @common.Param() params: TruckWhereUniqueInput
@@ -274,6 +333,11 @@ export class TruckControllerBase {
   }
 
   @common.Post("/:id/complianceDocuments")
+  @nestAccessControl.UseRoles({
+    resource: "Truck",
+    action: "update",
+    possession: "any",
+  })
   async connectComplianceDocuments(
     @common.Param() params: TruckWhereUniqueInput,
     @common.Body() body: ComplianceDocumentWhereUniqueInput[]
@@ -291,6 +355,11 @@ export class TruckControllerBase {
   }
 
   @common.Patch("/:id/complianceDocuments")
+  @nestAccessControl.UseRoles({
+    resource: "Truck",
+    action: "update",
+    possession: "any",
+  })
   async updateComplianceDocuments(
     @common.Param() params: TruckWhereUniqueInput,
     @common.Body() body: ComplianceDocumentWhereUniqueInput[]
@@ -308,6 +377,11 @@ export class TruckControllerBase {
   }
 
   @common.Delete("/:id/complianceDocuments")
+  @nestAccessControl.UseRoles({
+    resource: "Truck",
+    action: "update",
+    possession: "any",
+  })
   async disconnectComplianceDocuments(
     @common.Param() params: TruckWhereUniqueInput,
     @common.Body() body: ComplianceDocumentWhereUniqueInput[]
@@ -324,8 +398,14 @@ export class TruckControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id/contracts")
   @ApiNestedQuery(ContractFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Contract",
+    action: "read",
+    possession: "any",
+  })
   async findContracts(
     @common.Req() request: Request,
     @common.Param() params: TruckWhereUniqueInput
@@ -372,6 +452,11 @@ export class TruckControllerBase {
   }
 
   @common.Post("/:id/contracts")
+  @nestAccessControl.UseRoles({
+    resource: "Truck",
+    action: "update",
+    possession: "any",
+  })
   async connectContracts(
     @common.Param() params: TruckWhereUniqueInput,
     @common.Body() body: ContractWhereUniqueInput[]
@@ -389,6 +474,11 @@ export class TruckControllerBase {
   }
 
   @common.Patch("/:id/contracts")
+  @nestAccessControl.UseRoles({
+    resource: "Truck",
+    action: "update",
+    possession: "any",
+  })
   async updateContracts(
     @common.Param() params: TruckWhereUniqueInput,
     @common.Body() body: ContractWhereUniqueInput[]
@@ -406,6 +496,11 @@ export class TruckControllerBase {
   }
 
   @common.Delete("/:id/contracts")
+  @nestAccessControl.UseRoles({
+    resource: "Truck",
+    action: "update",
+    possession: "any",
+  })
   async disconnectContracts(
     @common.Param() params: TruckWhereUniqueInput,
     @common.Body() body: ContractWhereUniqueInput[]
@@ -422,8 +517,14 @@ export class TruckControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id/drivers")
   @ApiNestedQuery(DriverFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Driver",
+    action: "read",
+    possession: "any",
+  })
   async findDrivers(
     @common.Req() request: Request,
     @common.Param() params: TruckWhereUniqueInput
@@ -456,6 +557,11 @@ export class TruckControllerBase {
   }
 
   @common.Post("/:id/drivers")
+  @nestAccessControl.UseRoles({
+    resource: "Truck",
+    action: "update",
+    possession: "any",
+  })
   async connectDrivers(
     @common.Param() params: TruckWhereUniqueInput,
     @common.Body() body: DriverWhereUniqueInput[]
@@ -473,6 +579,11 @@ export class TruckControllerBase {
   }
 
   @common.Patch("/:id/drivers")
+  @nestAccessControl.UseRoles({
+    resource: "Truck",
+    action: "update",
+    possession: "any",
+  })
   async updateDrivers(
     @common.Param() params: TruckWhereUniqueInput,
     @common.Body() body: DriverWhereUniqueInput[]
@@ -490,6 +601,11 @@ export class TruckControllerBase {
   }
 
   @common.Delete("/:id/drivers")
+  @nestAccessControl.UseRoles({
+    resource: "Truck",
+    action: "update",
+    possession: "any",
+  })
   async disconnectDrivers(
     @common.Param() params: TruckWhereUniqueInput,
     @common.Body() body: DriverWhereUniqueInput[]

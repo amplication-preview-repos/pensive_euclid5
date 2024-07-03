@@ -13,6 +13,12 @@ import * as graphql from "@nestjs/graphql";
 import { GraphQLError } from "graphql";
 import { isRecordNotFoundError } from "../../prisma.util";
 import { MetaQueryPayload } from "../../util/MetaQueryPayload";
+import * as nestAccessControl from "nest-access-control";
+import * as gqlACGuard from "../../auth/gqlAC.guard";
+import { GqlDefaultAuthGuard } from "../../auth/gqlDefaultAuth.guard";
+import * as common from "@nestjs/common";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
 import { Contract } from "./Contract";
 import { ContractCountArgs } from "./ContractCountArgs";
 import { ContractFindManyArgs } from "./ContractFindManyArgs";
@@ -24,10 +30,20 @@ import { Customer } from "../../customer/base/Customer";
 import { Supplier } from "../../supplier/base/Supplier";
 import { Truck } from "../../truck/base/Truck";
 import { ContractService } from "../contract.service";
+@common.UseGuards(GqlDefaultAuthGuard, gqlACGuard.GqlACGuard)
 @graphql.Resolver(() => Contract)
 export class ContractResolverBase {
-  constructor(protected readonly service: ContractService) {}
+  constructor(
+    protected readonly service: ContractService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
 
+  @graphql.Query(() => MetaQueryPayload)
+  @nestAccessControl.UseRoles({
+    resource: "Contract",
+    action: "read",
+    possession: "any",
+  })
   async _contractsMeta(
     @graphql.Args() args: ContractCountArgs
   ): Promise<MetaQueryPayload> {
@@ -37,14 +53,26 @@ export class ContractResolverBase {
     };
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => [Contract])
+  @nestAccessControl.UseRoles({
+    resource: "Contract",
+    action: "read",
+    possession: "any",
+  })
   async contracts(
     @graphql.Args() args: ContractFindManyArgs
   ): Promise<Contract[]> {
     return this.service.contracts(args);
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => Contract, { nullable: true })
+  @nestAccessControl.UseRoles({
+    resource: "Contract",
+    action: "read",
+    possession: "own",
+  })
   async contract(
     @graphql.Args() args: ContractFindUniqueArgs
   ): Promise<Contract | null> {
@@ -55,7 +83,13 @@ export class ContractResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => Contract)
+  @nestAccessControl.UseRoles({
+    resource: "Contract",
+    action: "create",
+    possession: "any",
+  })
   async createContract(
     @graphql.Args() args: CreateContractArgs
   ): Promise<Contract> {
@@ -85,7 +119,13 @@ export class ContractResolverBase {
     });
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => Contract)
+  @nestAccessControl.UseRoles({
+    resource: "Contract",
+    action: "update",
+    possession: "any",
+  })
   async updateContract(
     @graphql.Args() args: UpdateContractArgs
   ): Promise<Contract | null> {
@@ -125,6 +165,11 @@ export class ContractResolverBase {
   }
 
   @graphql.Mutation(() => Contract)
+  @nestAccessControl.UseRoles({
+    resource: "Contract",
+    action: "delete",
+    possession: "any",
+  })
   async deleteContract(
     @graphql.Args() args: DeleteContractArgs
   ): Promise<Contract | null> {
@@ -140,9 +185,15 @@ export class ContractResolverBase {
     }
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => Customer, {
     nullable: true,
     name: "customer",
+  })
+  @nestAccessControl.UseRoles({
+    resource: "Customer",
+    action: "read",
+    possession: "any",
   })
   async getCustomer(
     @graphql.Parent() parent: Contract
@@ -155,9 +206,15 @@ export class ContractResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => Supplier, {
     nullable: true,
     name: "supplier",
+  })
+  @nestAccessControl.UseRoles({
+    resource: "Supplier",
+    action: "read",
+    possession: "any",
   })
   async getSupplier(
     @graphql.Parent() parent: Contract
@@ -170,9 +227,15 @@ export class ContractResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => Truck, {
     nullable: true,
     name: "truck",
+  })
+  @nestAccessControl.UseRoles({
+    resource: "Truck",
+    action: "read",
+    possession: "any",
   })
   async getTruck(@graphql.Parent() parent: Contract): Promise<Truck | null> {
     const result = await this.service.getTruck(parent.id);

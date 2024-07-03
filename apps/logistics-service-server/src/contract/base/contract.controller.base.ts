@@ -16,17 +16,35 @@ import * as errors from "../../errors";
 import { Request } from "express";
 import { plainToClass } from "class-transformer";
 import { ApiNestedQuery } from "../../decorators/api-nested-query.decorator";
+import * as nestAccessControl from "nest-access-control";
+import * as defaultAuthGuard from "../../auth/defaultAuth.guard";
 import { ContractService } from "../contract.service";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
 import { ContractCreateInput } from "./ContractCreateInput";
 import { Contract } from "./Contract";
 import { ContractFindManyArgs } from "./ContractFindManyArgs";
 import { ContractWhereUniqueInput } from "./ContractWhereUniqueInput";
 import { ContractUpdateInput } from "./ContractUpdateInput";
 
+@swagger.ApiBearerAuth()
+@common.UseGuards(defaultAuthGuard.DefaultAuthGuard, nestAccessControl.ACGuard)
 export class ContractControllerBase {
-  constructor(protected readonly service: ContractService) {}
+  constructor(
+    protected readonly service: ContractService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Post()
   @swagger.ApiCreatedResponse({ type: Contract })
+  @nestAccessControl.UseRoles({
+    resource: "Contract",
+    action: "create",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async createContract(
     @common.Body() data: ContractCreateInput
   ): Promise<Contract> {
@@ -84,9 +102,18 @@ export class ContractControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get()
   @swagger.ApiOkResponse({ type: [Contract] })
   @ApiNestedQuery(ContractFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Contract",
+    action: "read",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async contracts(@common.Req() request: Request): Promise<Contract[]> {
     const args = plainToClass(ContractFindManyArgs, request.query);
     return this.service.contracts({
@@ -123,9 +150,18 @@ export class ContractControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id")
   @swagger.ApiOkResponse({ type: Contract })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Contract",
+    action: "read",
+    possession: "own",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async contract(
     @common.Param() params: ContractWhereUniqueInput
   ): Promise<Contract | null> {
@@ -169,9 +205,18 @@ export class ContractControllerBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Patch("/:id")
   @swagger.ApiOkResponse({ type: Contract })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Contract",
+    action: "update",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async updateContract(
     @common.Param() params: ContractWhereUniqueInput,
     @common.Body() data: ContractUpdateInput
@@ -243,6 +288,14 @@ export class ContractControllerBase {
   @common.Delete("/:id")
   @swagger.ApiOkResponse({ type: Contract })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Contract",
+    action: "delete",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async deleteContract(
     @common.Param() params: ContractWhereUniqueInput
   ): Promise<Contract | null> {

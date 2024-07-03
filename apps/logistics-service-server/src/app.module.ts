@@ -5,24 +5,37 @@ import { TruckModule } from "./truck/truck.module";
 import { DriverModule } from "./driver/driver.module";
 import { CustomerModule } from "./customer/customer.module";
 import { ContractModule } from "./contract/contract.module";
+import { UserModule } from "./user/user.module";
+import { ContractManagementModule } from "./ContractManagement/contractmanagement.module";
+import { FleetManagementModule } from "./FleetManagement/fleetmanagement.module";
 import { HealthModule } from "./health/health.module";
 import { PrismaModule } from "./prisma/prisma.module";
 import { SecretsManagerModule } from "./providers/secrets/secretsManager.module";
+import { KafkaModule } from "./kafka/kafka.module";
 import { ServeStaticModule } from "@nestjs/serve-static";
 import { ServeStaticOptionsService } from "./serveStaticOptions.service";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { GraphQLModule } from "@nestjs/graphql";
 import { ApolloDriver, ApolloDriverConfig } from "@nestjs/apollo";
 
+import { ACLModule } from "./auth/acl.module";
+import { AuthModule } from "./auth/auth.module";
+
 @Module({
   controllers: [],
   imports: [
+    ACLModule,
+    AuthModule,
+    KafkaModule,
     SupplierModule,
     ComplianceDocumentModule,
     TruckModule,
     DriverModule,
     CustomerModule,
     ContractModule,
+    UserModule,
+    ContractManagementModule,
+    FleetManagementModule,
     HealthModule,
     PrismaModule,
     SecretsManagerModule,

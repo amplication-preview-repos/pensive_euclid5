@@ -16,7 +16,11 @@ import * as errors from "../../errors";
 import { Request } from "express";
 import { plainToClass } from "class-transformer";
 import { ApiNestedQuery } from "../../decorators/api-nested-query.decorator";
+import * as nestAccessControl from "nest-access-control";
+import * as defaultAuthGuard from "../../auth/defaultAuth.guard";
 import { ComplianceDocumentService } from "../complianceDocument.service";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
 import { ComplianceDocumentCreateInput } from "./ComplianceDocumentCreateInput";
 import { ComplianceDocument } from "./ComplianceDocument";
 import { ComplianceDocumentFindManyArgs } from "./ComplianceDocumentFindManyArgs";
@@ -26,10 +30,24 @@ import { TruckFindManyArgs } from "../../truck/base/TruckFindManyArgs";
 import { Truck } from "../../truck/base/Truck";
 import { TruckWhereUniqueInput } from "../../truck/base/TruckWhereUniqueInput";
 
+@swagger.ApiBearerAuth()
+@common.UseGuards(defaultAuthGuard.DefaultAuthGuard, nestAccessControl.ACGuard)
 export class ComplianceDocumentControllerBase {
-  constructor(protected readonly service: ComplianceDocumentService) {}
+  constructor(
+    protected readonly service: ComplianceDocumentService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Post()
   @swagger.ApiCreatedResponse({ type: ComplianceDocument })
+  @nestAccessControl.UseRoles({
+    resource: "ComplianceDocument",
+    action: "create",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async createComplianceDocument(
     @common.Body() data: ComplianceDocumentCreateInput
   ): Promise<ComplianceDocument> {
@@ -62,9 +80,18 @@ export class ComplianceDocumentControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get()
   @swagger.ApiOkResponse({ type: [ComplianceDocument] })
   @ApiNestedQuery(ComplianceDocumentFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "ComplianceDocument",
+    action: "read",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async complianceDocuments(
     @common.Req() request: Request
   ): Promise<ComplianceDocument[]> {
@@ -90,9 +117,18 @@ export class ComplianceDocumentControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id")
   @swagger.ApiOkResponse({ type: ComplianceDocument })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "ComplianceDocument",
+    action: "read",
+    possession: "own",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async complianceDocument(
     @common.Param() params: ComplianceDocumentWhereUniqueInput
   ): Promise<ComplianceDocument | null> {
@@ -123,9 +159,18 @@ export class ComplianceDocumentControllerBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Patch("/:id")
   @swagger.ApiOkResponse({ type: ComplianceDocument })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "ComplianceDocument",
+    action: "update",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async updateComplianceDocument(
     @common.Param() params: ComplianceDocumentWhereUniqueInput,
     @common.Body() data: ComplianceDocumentUpdateInput
@@ -172,6 +217,14 @@ export class ComplianceDocumentControllerBase {
   @common.Delete("/:id")
   @swagger.ApiOkResponse({ type: ComplianceDocument })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "ComplianceDocument",
+    action: "delete",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async deleteComplianceDocument(
     @common.Param() params: ComplianceDocumentWhereUniqueInput
   ): Promise<ComplianceDocument | null> {
@@ -205,8 +258,14 @@ export class ComplianceDocumentControllerBase {
     }
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id/trucks")
   @ApiNestedQuery(TruckFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Truck",
+    action: "read",
+    possession: "any",
+  })
   async findTrucks(
     @common.Req() request: Request,
     @common.Param() params: ComplianceDocumentWhereUniqueInput
@@ -244,6 +303,11 @@ export class ComplianceDocumentControllerBase {
   }
 
   @common.Post("/:id/trucks")
+  @nestAccessControl.UseRoles({
+    resource: "ComplianceDocument",
+    action: "update",
+    possession: "any",
+  })
   async connectTrucks(
     @common.Param() params: ComplianceDocumentWhereUniqueInput,
     @common.Body() body: TruckWhereUniqueInput[]
@@ -261,6 +325,11 @@ export class ComplianceDocumentControllerBase {
   }
 
   @common.Patch("/:id/trucks")
+  @nestAccessControl.UseRoles({
+    resource: "ComplianceDocument",
+    action: "update",
+    possession: "any",
+  })
   async updateTrucks(
     @common.Param() params: ComplianceDocumentWhereUniqueInput,
     @common.Body() body: TruckWhereUniqueInput[]
@@ -278,6 +347,11 @@ export class ComplianceDocumentControllerBase {
   }
 
   @common.Delete("/:id/trucks")
+  @nestAccessControl.UseRoles({
+    resource: "ComplianceDocument",
+    action: "update",
+    possession: "any",
+  })
   async disconnectTrucks(
     @common.Param() params: ComplianceDocumentWhereUniqueInput,
     @common.Body() body: TruckWhereUniqueInput[]

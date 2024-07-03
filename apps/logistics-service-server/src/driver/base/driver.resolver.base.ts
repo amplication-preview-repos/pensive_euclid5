@@ -13,6 +13,12 @@ import * as graphql from "@nestjs/graphql";
 import { GraphQLError } from "graphql";
 import { isRecordNotFoundError } from "../../prisma.util";
 import { MetaQueryPayload } from "../../util/MetaQueryPayload";
+import * as nestAccessControl from "nest-access-control";
+import * as gqlACGuard from "../../auth/gqlAC.guard";
+import { GqlDefaultAuthGuard } from "../../auth/gqlDefaultAuth.guard";
+import * as common from "@nestjs/common";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
 import { Driver } from "./Driver";
 import { DriverCountArgs } from "./DriverCountArgs";
 import { DriverFindManyArgs } from "./DriverFindManyArgs";
@@ -23,10 +29,20 @@ import { DeleteDriverArgs } from "./DeleteDriverArgs";
 import { TruckFindManyArgs } from "../../truck/base/TruckFindManyArgs";
 import { Truck } from "../../truck/base/Truck";
 import { DriverService } from "../driver.service";
+@common.UseGuards(GqlDefaultAuthGuard, gqlACGuard.GqlACGuard)
 @graphql.Resolver(() => Driver)
 export class DriverResolverBase {
-  constructor(protected readonly service: DriverService) {}
+  constructor(
+    protected readonly service: DriverService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
 
+  @graphql.Query(() => MetaQueryPayload)
+  @nestAccessControl.UseRoles({
+    resource: "Driver",
+    action: "read",
+    possession: "any",
+  })
   async _driversMeta(
     @graphql.Args() args: DriverCountArgs
   ): Promise<MetaQueryPayload> {
@@ -36,12 +52,24 @@ export class DriverResolverBase {
     };
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => [Driver])
+  @nestAccessControl.UseRoles({
+    resource: "Driver",
+    action: "read",
+    possession: "any",
+  })
   async drivers(@graphql.Args() args: DriverFindManyArgs): Promise<Driver[]> {
     return this.service.drivers(args);
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => Driver, { nullable: true })
+  @nestAccessControl.UseRoles({
+    resource: "Driver",
+    action: "read",
+    possession: "own",
+  })
   async driver(
     @graphql.Args() args: DriverFindUniqueArgs
   ): Promise<Driver | null> {
@@ -52,7 +80,13 @@ export class DriverResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => Driver)
+  @nestAccessControl.UseRoles({
+    resource: "Driver",
+    action: "create",
+    possession: "any",
+  })
   async createDriver(@graphql.Args() args: CreateDriverArgs): Promise<Driver> {
     return await this.service.createDriver({
       ...args,
@@ -68,7 +102,13 @@ export class DriverResolverBase {
     });
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => Driver)
+  @nestAccessControl.UseRoles({
+    resource: "Driver",
+    action: "update",
+    possession: "any",
+  })
   async updateDriver(
     @graphql.Args() args: UpdateDriverArgs
   ): Promise<Driver | null> {
@@ -96,6 +136,11 @@ export class DriverResolverBase {
   }
 
   @graphql.Mutation(() => Driver)
+  @nestAccessControl.UseRoles({
+    resource: "Driver",
+    action: "delete",
+    possession: "any",
+  })
   async deleteDriver(
     @graphql.Args() args: DeleteDriverArgs
   ): Promise<Driver | null> {
@@ -111,7 +156,13 @@ export class DriverResolverBase {
     }
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => [Truck], { name: "trucks" })
+  @nestAccessControl.UseRoles({
+    resource: "Truck",
+    action: "read",
+    possession: "any",
+  })
   async findTrucks(
     @graphql.Parent() parent: Driver,
     @graphql.Args() args: TruckFindManyArgs
@@ -125,9 +176,15 @@ export class DriverResolverBase {
     return results;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => Truck, {
     nullable: true,
     name: "truck",
+  })
+  @nestAccessControl.UseRoles({
+    resource: "Truck",
+    action: "read",
+    possession: "any",
   })
   async getTruck(@graphql.Parent() parent: Driver): Promise<Truck | null> {
     const result = await this.service.getTruck(parent.id);
